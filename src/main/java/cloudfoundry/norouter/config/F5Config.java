@@ -16,14 +16,13 @@
 
 package cloudfoundry.norouter.config;
 
+import cloudfoundry.norouter.f5.Agent;
 import cloudfoundry.norouter.f5.ContextStartedListener;
 import cloudfoundry.norouter.f5.RouteRegisterListener;
 import cloudfoundry.norouter.f5.RouteUnregisterListener;
 import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
 import cloudfoundry.norouter.f5.client.IControlClient;
 import cloudfoundry.norouter.routingtable.RouteRegistrar;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,11 +32,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class F5Config {
-
-	private static final Logger LOGGER = LoggerFactory.getLogger(F5Config.class);
-
-	@Value("${f5.poolNamePrefix:pool_cf_}")
-	private String poolNamePrefix;
 
 	@Bean
 	HttpClientIControlClient iControlClient(
@@ -55,17 +49,25 @@ public class F5Config {
 	}
 
 	@Bean
-	RouteRegisterListener f5routeRegisterListener(IControlClient client) {
-		return new RouteRegisterListener(poolNamePrefix, client);
+	Agent f5Agent(
+			@Value("${f5.poolNamePrefix:pool_cf_}") String poolNamePrefix,
+			IControlClient client,
+			RouteRegistrar routeRegistrar) {
+		return new Agent(poolNamePrefix, client, routeRegistrar);
 	}
 
 	@Bean
-	RouteUnregisterListener f5routeUnregisterListener(IControlClient client) {
-		return new RouteUnregisterListener(poolNamePrefix, client);
+	RouteRegisterListener f5routeRegisterListener(Agent agent) {
+		return new RouteRegisterListener(agent);
 	}
 
 	@Bean
-	ContextStartedListener f5contextStartedListener(IControlClient client, RouteRegistrar routeRegistrar) {
-		return new ContextStartedListener(poolNamePrefix, client, routeRegistrar);
+	RouteUnregisterListener f5routeUnregisterListener(Agent agent) {
+		return new RouteUnregisterListener(agent);
+	}
+
+	@Bean
+	ContextStartedListener f5contextStartedListener(Agent agent) {
+		return new ContextStartedListener(agent);
 	}
 }

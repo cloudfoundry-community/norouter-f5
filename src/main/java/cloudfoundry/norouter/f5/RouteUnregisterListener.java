@@ -16,11 +16,7 @@
 
 package cloudfoundry.norouter.f5;
 
-import cloudfoundry.norouter.f5.client.IControlClient;
-import cloudfoundry.norouter.f5.client.ResourceNotFoundException;
 import cloudfoundry.norouter.routingtable.RouteUnregisterEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.Ordered;
 
@@ -29,27 +25,15 @@ import org.springframework.core.Ordered;
  */
 public class RouteUnregisterListener implements ApplicationListener<RouteUnregisterEvent>, Ordered {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(RouteUnregisterListener.class);
+	private final Agent agent;
 
-	private final String poolNamePrefix;
-	private final IControlClient client;
-
-	public RouteUnregisterListener(String poolNamePrefix, IControlClient client) {
-		this.poolNamePrefix = poolNamePrefix;
-		this.client = client;
+	public RouteUnregisterListener(Agent agent) {
+		this.agent = agent;
 	}
 
 	@Override
 	public void onApplicationEvent(RouteUnregisterEvent event) {
-		final String poolName = poolNamePrefix + event.getHost();
-		try {
-			LOGGER.info("Removing pool member {} from pool {}", event.getAddress(), poolName);
-			client.deletePoolMember(poolName, event.getAddress());
-			Util.updatePoolModifiedTimestamp(client, poolName);
-			LOGGER.debug("Updated modified field on pool {}", poolName);
-		} catch (ResourceNotFoundException e) {
-			// Member was already removed
-		}
+		agent.unregisterRoute(event);
 	}
 
 	@Override

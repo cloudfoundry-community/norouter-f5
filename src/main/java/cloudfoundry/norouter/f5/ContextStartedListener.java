@@ -16,47 +16,24 @@
 
 package cloudfoundry.norouter.f5;
 
-import cloudfoundry.norouter.f5.client.IControlClient;
-import cloudfoundry.norouter.f5.client.Pool;
-import cloudfoundry.norouter.routingtable.RouteRegistrar;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextStartedEvent;
 import org.springframework.core.Ordered;
-
-import java.net.InetSocketAddress;
-import java.util.Collection;
 
 /**
  * @author Mike Heath
  */
 public class ContextStartedListener implements ApplicationListener<ContextStartedEvent>, Ordered {
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(ContextStartedListener.class);
+	private final Agent agent;
 
-	private final String poolNamePrefix;
-	private final IControlClient client;
-	private final RouteRegistrar routeRegistrar;
-
-	public ContextStartedListener(String poolNamePrefix, IControlClient client, RouteRegistrar routeRegistrar) {
-		this.poolNamePrefix = poolNamePrefix;
-		this.client = client;
-		this.routeRegistrar = routeRegistrar;
+	public ContextStartedListener(Agent agent) {
+		this.agent = agent;
 	}
 
 	@Override
 	public void onApplicationEvent(ContextStartedEvent event) {
-		client.getAllPools(true).stream()
-			.filter(pool -> pool.getName().startsWith(poolNamePrefix))
-			.forEach(pool -> pool.getMembers().get().forEach(member -> {
-				final String host = pool.getName().substring(poolNamePrefix.length());
-				final String[] addressParts = member.getName().split(":");
-				final InetSocketAddress address = InetSocketAddress.createUnresolved(addressParts[0], Integer.valueOf(addressParts[1]));
-				// TODO Get application fields from description
-				LOGGER.info("Registering existing route from F5 for host {} with target {}", host, address);
-				routeRegistrar.insertRoute(host, address, null, null, null);
-			}));
+		agent.populateRouteRegistrar();
 	}
 
 	@Override
