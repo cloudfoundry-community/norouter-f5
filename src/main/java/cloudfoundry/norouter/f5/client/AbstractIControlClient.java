@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 
 /**
  * @author Mike Heath <elcapo@gmail.com>
@@ -106,8 +107,16 @@ public abstract class AbstractIControlClient implements IControlClient {
 		deleteResource(membersUri(poolName) + "/" + poolMember);
 	}
 
+	@Override
+	public Pool updatePoolDescription(String name, String description) {
+		final String uri = POOL_URI + "/" + name;
+		final JsonNode resource = putResource(uri, Collections.singletonMap("description", description));
+		return readValue(resource, Pool.class);
+	}
+
 	protected abstract JsonNode getResource(String uri);
 	protected abstract JsonNode postResource(String uri, Object resource);
+	protected abstract JsonNode putResource(String uri, Object resource);
 	protected abstract void deleteResource(String uri);
 
 	protected void validateResponse(int statusCode, String reason, int... expectedStatusCodes) {

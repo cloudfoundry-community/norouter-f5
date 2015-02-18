@@ -39,19 +39,19 @@ public class HttpClientIControlClientIT {
 
 	@BeforeClass
 	public void setup() {
-		final String ltmHost = System.getenv("LTM_HOST");
+		final String ltmHost = System.getenv("LTM_URL");
 		if (ltmHost == null) {
-			throw new IllegalStateException("You MUST set the environment variable 'LTM_HOST' with the HTTPS URL " +
+			throw new IllegalStateException("You MUST set the environment variable 'LTM_URL' with the HTTPS URL " +
 					"(including credentials) to run the integration tests.");
 		}
 		builder = HttpClientIControlClient.create()
-				.address(ltmHost)
-				.verifyTls(false);
+				.url(ltmHost)
+				.skipVerifyTls(true);
 		client = builder.build();
 	}
 
 	@AfterClass
-	public void teardown() {
+	public void tearDown() {
 		client.close();
 	}
 

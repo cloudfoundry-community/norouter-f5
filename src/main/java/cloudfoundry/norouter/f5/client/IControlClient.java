@@ -46,4 +46,6 @@ public interface IControlClient extends AutoCloseable {
 	void deletePoolMember(String poolName, InetSocketAddress poolMember);
 
 	void deletePoolMember(String poolName, String poolMember);
+
+	Pool updatePoolDescription(String poolName, String description);
 }

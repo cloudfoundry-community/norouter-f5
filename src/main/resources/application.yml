@@ -1,0 +1,7 @@
+nats:
+  machines:
+    nats://nats:password@10.118.216.202
+
+f5:
+  url: https://slb-diz-dev-a.ldschurch.org
+  user: admmah1

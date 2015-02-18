@@ -22,8 +22,10 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -53,16 +55,16 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 
 	public static class Builder {
 
-		private boolean verifyTls = true;
-		private URI address;
+		private boolean skipVerifyTls = false;
+		private URI url;
 		private String user;
 		private String password;
 
-		public Builder address(String address) {
-			return address(URI.create(address));
+		public Builder url(String address) {
+			return url(URI.create(address));
 		}
 
-		public Builder address(URI address) {
+		public Builder url(URI address) {
 			Objects.requireNonNull(address);
 			final String userInfo = address.getUserInfo();
 			if (userInfo != null) {
@@ -70,12 +72,12 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 				this.user = userInfo.substring(0, seperatorIndex);
 				this.password = userInfo.substring(seperatorIndex + 1);
 			}
-			this.address = address;
+			this.url = address;
 			return this;
 		}
 
-		public Builder verifyTls(boolean verifyTls) {
-			this.verifyTls = verifyTls;
+		public Builder skipVerifyTls(boolean verifyTls) {
+			this.skipVerifyTls = verifyTls;
 			return this;
 		}
 
@@ -89,9 +91,9 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 			return this;
 		}
 
-		public IControlClient build() {
-			Objects.requireNonNull(address, "address is a required argument");
-			final HttpHost host = new HttpHost(address.getHost(), address.getPort(), address.getScheme());
+		public HttpClientIControlClient build() {
+			Objects.requireNonNull(url, "url is a required argument");
+			final HttpHost host = new HttpHost(url.getHost(), url.getPort(), url.getScheme());
 			return new HttpClientIControlClient(host, this);
 		}
 
@@ -110,8 +112,7 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 				.setDefaultCredentialsProvider(credentialsProvider)
 				.disableCookieManagement();
 
-		if (!builder.verifyTls) {
-			httpClientBuilder.setSSLHostnameVerifier((s, sslSession) -> true);
+		if (builder.skipVerifyTls) {
 			httpClientBuilder.setSSLSocketFactory(NaiveTrustManager.getSocketFactory());
 		}
 		httpClient = httpClientBuilder.build();
@@ -137,10 +138,29 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 
 	@Override
 	protected JsonNode postResource(String uri, Object resource) {
+		return update(uri, resource, Method.POST);
+	}
+
+	@Override
+	protected JsonNode putResource(String uri, Object resource) {
+		return update(uri, resource, Method.PUT);
+	}
+
+	private enum Method { PUT, POST }
+
+	private JsonNode update(String uri, Object resource, Method method) {
 		try {
 			final String body = mapper.writeValueAsString(resource);
-			LOGGER.debug("POSTting {} {}", uri, body);
-			final HttpPost request = new HttpPost(address.resolve(uri));
+			LOGGER.debug("{}ting {} {}", method, uri, body);
+			final HttpEntityEnclosingRequestBase request;
+			final URI resolvedUri = address.resolve(uri);
+			if (method == Method.PUT) {
+				request = new HttpPut(resolvedUri);
+			} else if (method == Method.POST) {
+				request = new HttpPost(resolvedUri);
+			} else {
+				throw new IllegalArgumentException("Don't know what to do with method " + method);
+			}
 			request.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
 			try (final CloseableHttpResponse response = httpClient.execute(request)) {
 				final StatusLine statusLine = response.getStatusLine();
