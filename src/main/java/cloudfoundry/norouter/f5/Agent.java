@@ -18,6 +18,7 @@ package cloudfoundry.norouter.f5;
 
 import cloudfoundry.norouter.f5.client.ConflictException;
 import cloudfoundry.norouter.f5.client.IControlClient;
+import cloudfoundry.norouter.f5.client.Monitors;
 import cloudfoundry.norouter.f5.client.Pool;
 import cloudfoundry.norouter.f5.client.ResourceNotFoundException;
 import cloudfoundry.norouter.routingtable.RouteDetails;
@@ -76,6 +77,7 @@ public class Agent {
 		final Pool pool = Pool.create()
 				.name(poolName)
 				.description(poolDescriptionJsonish)
+				.monitor(Monitors.TCP_HALF_OPEN)
 				.build();
 
 		boolean poolCreated = false;

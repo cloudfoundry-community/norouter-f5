@@ -33,11 +33,13 @@ public class Pool extends JsonObject {
 
 	private final String name;
 	private final String description;
+	private final String monitor;
 	private final SubCollection<PoolMember> poolMembers;
 
 	public static class Builder {
 		private String name;
 		private String description;
+		private String monitor;
 		private Collection<PoolMember> poolMembers = new ArrayList<>();
 
 		public Builder name(String name) {
@@ -62,8 +64,13 @@ public class Pool extends JsonObject {
 			return addMember(host, port, null);
 		}
 
-		private Builder addMember(String host, int port, String description) {
+		public Builder addMember(String host, int port, String description) {
 			poolMembers.add(new PoolMember(host + ":" + port, description));
+			return this;
+		}
+
+		public Builder monitor(String monitor) {
+			this.monitor = monitor;
 			return this;
 		}
 
@@ -79,6 +86,7 @@ public class Pool extends JsonObject {
 	private Pool(Builder builder) {
 		name = Objects.requireNonNull(builder.name, "name is a required parameter");
 		description = builder.description;
+		monitor = builder.monitor;
 		poolMembers = new SubCollection<>(null, builder.poolMembers);
 	}
 
@@ -86,10 +94,12 @@ public class Pool extends JsonObject {
 	Pool(
 			@JsonProperty("name") String name,
 			@JsonProperty("description") String description,
+			@JsonProperty("monitor") String monitor,
 			@JsonProperty("membersReference") SubCollection<PoolMember> poolMembers
 	) {
 		this.name = name;
 		this.description = description;
+		this.monitor = monitor;
 		this.poolMembers = poolMembers;
 	}
 
@@ -99,6 +109,10 @@ public class Pool extends JsonObject {
 
 	public String getDescription() {
 		return description;
+	}
+
+	public String getMonitor() {
+		return monitor;
 	}
 
 	@JsonIgnore
