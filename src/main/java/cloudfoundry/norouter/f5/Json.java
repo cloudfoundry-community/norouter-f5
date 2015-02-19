@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * @author Mike Heath
@@ -31,12 +32,8 @@ class Json {
 			.findAndRegisterModules()
 			.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
-	public static <T> T fromJson(Class<T> type, String json) {
-		try {
-			return mapper.reader(type).readValue(json);
-		} catch (IOException e) {
-			throw new IllegalArgumentException(e);
-		}
+	public static <T> T fromJson(Class<T> type, String json) throws IOException {
+		return mapper.reader(type).readValue(json);
 	}
 
 	public static String toJson(Object object) {
@@ -44,6 +41,28 @@ class Json {
 			return mapper.writeValueAsString(object);
 		} catch (JsonProcessingException e) {
 			throw new IllegalArgumentException(e);
+		}
+	}
+
+	/**
+	 * The iControl REST API seems to filter out escaped double quotes so instead of using pure JSON, we use JSON
+	 * that replaces the double quote with a tick (`).
+	 *
+	 * @param object the object to JSONishify
+	 * @return JSON where the the double quote (") has been replaced with a tick (`).
+	 */
+	public static String toJsonish(Object object) {
+		return escape(toJson(object));
+	}
+
+	public static <T> Optional<T> fromJsonish(Class<T> type, String jsonish) {
+		if (jsonish == null || jsonish.trim().length() == 0) {
+			return Optional.empty();
+		}
+		try {
+			return Optional.of(fromJson(type, unescape(jsonish)));
+		} catch (IOException e) {
+			return Optional.empty();
 		}
 	}
 

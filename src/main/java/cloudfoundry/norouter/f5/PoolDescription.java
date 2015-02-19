@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * @author Mike Heath
@@ -30,6 +31,10 @@ public class PoolDescription extends JsonObject {
 
 	private Instant created;
 	private Instant modified;
+
+	public PoolDescription() {
+		this(Instant.now(), Instant.now());
+	}
 
 	@JsonCreator
 	public PoolDescription(
@@ -57,10 +62,10 @@ public class PoolDescription extends JsonObject {
 	}
 
 	public String toJsonish() {
-		return Json.escape(Json.toJson(this));
+		return Json.toJsonish(this);
 	}
 
-	public static PoolDescription fromJsonish(String jsonish) {
-		return Json.fromJson(PoolDescription.class, Json.unescape(jsonish));
+	public static Optional<PoolDescription> fromJsonish(String jsonish) {
+		return Json.fromJsonish(PoolDescription.class, jsonish);
 	}
 }

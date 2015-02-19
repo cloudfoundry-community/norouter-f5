@@ -82,7 +82,7 @@ public abstract class AbstractIControlClient implements IControlClient {
 
 	@Override
 	public void addPoolMember(String poolName, InetSocketAddress poolMember, String description) {
-		addPoolMember(poolName, addressToPoolMemberName(poolMember), description);
+		addPoolMember(poolName, poolMember.toString(), description);
 	}
 
 	@Override
@@ -99,7 +99,7 @@ public abstract class AbstractIControlClient implements IControlClient {
 
 	@Override
 	public void deletePoolMember(String poolName, InetSocketAddress poolMember) {
-		deletePoolMember(poolName, addressToPoolMemberName(poolMember));
+		deletePoolMember(poolName, poolMember.toString());
 	}
 
 	@Override
@@ -112,6 +112,13 @@ public abstract class AbstractIControlClient implements IControlClient {
 		final String uri = POOL_URI + "/" + name;
 		final JsonNode resource = putResource(uri, Collections.singletonMap("description", description));
 		return readValue(resource, Pool.class);
+	}
+
+	@Override
+	public PoolMember updatePoolMemberDescription(String poolName, InetSocketAddress member, String description) {
+		final String uri = membersUri(poolName) + "/" + member.toString();
+		final JsonNode resource = putResource(uri, Collections.singletonMap("description", description));
+		return readValue(resource, PoolMember.class);
 	}
 
 	protected abstract JsonNode getResource(String uri);
@@ -143,10 +150,6 @@ public abstract class AbstractIControlClient implements IControlClient {
 		} catch (IOException e) {
 			throw new JsonException(e);
 		}
-	}
-
-	private String addressToPoolMemberName(InetSocketAddress poolMember) {
-		return poolMember.getHostString() + ":" + poolMember.getPort();
 	}
 
 	private String membersUri(String poolName) {

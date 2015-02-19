@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.time.Instant;
+import java.util.Optional;
 
 /**
  * @author Mike Heath
@@ -47,15 +48,22 @@ public class Agent {
 
 	public void populateRouteRegistrar() {
 		client.getAllPools(true).stream()
-			.filter(pool -> pool.getName().startsWith(poolNamePrefix))
-			.forEach(pool -> pool.getMembers().get().forEach(member -> {
-				final String host = pool.getName().substring(poolNamePrefix.length());
-				final String[] addressParts = member.getName().split(":");
-				final InetSocketAddress address = InetSocketAddress.createUnresolved(addressParts[0], Integer.valueOf(addressParts[1]));
-				// TODO Get application fields from description
-				LOGGER.info("Registering existing route from F5 for host {} with target {}", host, address);
-				routeRegistrar.insertRoute(host, address, null, null, null);
-			}));
+				.filter(pool -> pool.getName().startsWith(poolNamePrefix))
+				.forEach(pool -> pool.getMembers().get().forEach(member -> {
+					final String host = pool.getName().substring(poolNamePrefix.length());
+					final String[] addressParts = member.getName().split(":");
+					final InetSocketAddress address = InetSocketAddress.createUnresolved(addressParts[0], Integer.valueOf(addressParts[1]));
+					final PoolMemberDescription description = PoolMemberDescription
+							.fromJsonish(member.getDescription())
+							.orElse(new PoolMemberDescription());
+					LOGGER.info("Registering existing route from F5 for host {} with target {}", host, address);
+					routeRegistrar.insertRoute(
+							host,
+							address,
+							description.getApplicationGuid(),
+							description.getApplicationIndex(),
+							description.getPrivateInstanceId());
+				}));
 
 	}
 
@@ -80,7 +88,8 @@ public class Agent {
 		}
 
 		try {
-			client.addPoolMember(poolName, route.getAddress(), "We need a good JSON description here");
+			final PoolMemberDescription poolMemberDescription = new PoolMemberDescription(route);
+			client.addPoolMember(poolName, route.getAddress(), poolMemberDescription.toJsonish());
 			LOGGER.info("Added pool member {} to pool {}", route.getAddress(), poolName);
 
 			if (!poolCreated) {
@@ -91,6 +100,7 @@ public class Agent {
 			}
 		} catch (ConflictException e) {
 			// Pool member already exists
+			updatePoolMemberDescription(poolName, route);
 		}
 	}
 
@@ -108,9 +118,31 @@ public class Agent {
 
 	private void updatePoolModifiedTimestamp(String poolName) {
 		final Pool pool = client.getPool(poolName);
-		final PoolDescription description = PoolDescription.fromJsonish(pool.getDescription());
+		final PoolDescription description = PoolDescription.fromJsonish(pool.getDescription()).orElse(new PoolDescription());
 		description.setModified(Instant.now());
 		client.updatePoolDescription(poolName, description.toJsonish());
+	}
+
+	private void updatePoolMemberDescription(String poolName, RouteDetails route) {
+		final Pool pool = client.getPool(poolName);
+		pool.getMembers().ifPresent(members -> members.stream()
+			.filter(member -> member.getName().equals(route.getAddress().toString()))
+			.findFirst()
+			.ifPresent(member -> {
+				final Optional<PoolMemberDescription> existingDescription = PoolMemberDescription.fromJsonish(member.getDescription());
+				final PoolMemberDescription desiredDescription = new PoolMemberDescription(route);
+				boolean update = true;
+				if (existingDescription.isPresent()) {
+					final PoolMemberDescription description = existingDescription.get();
+					desiredDescription.setCreated(description.getCreated());
+					desiredDescription.setModified(description.getModified());
+					update = !desiredDescription.equals(description);
+				}
+				if (update) {
+					desiredDescription.setModified(Instant.now());
+					client.updatePoolMemberDescription(poolName, route.getAddress(), desiredDescription.toJsonish());
+				}
+			}));
 	}
 
 }
