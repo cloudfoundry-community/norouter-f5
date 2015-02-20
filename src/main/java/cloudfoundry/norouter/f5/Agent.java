@@ -50,21 +50,22 @@ public class Agent {
 	public void populateRouteRegistrar() {
 		client.getAllPools(true).stream()
 				.filter(pool -> pool.getName().startsWith(poolNamePrefix))
-				.forEach(pool -> pool.getMembers().get().forEach(member -> {
-					final String host = pool.getName().substring(poolNamePrefix.length());
-					final String[] addressParts = member.getName().split(":");
-					final InetSocketAddress address = InetSocketAddress.createUnresolved(addressParts[0], Integer.valueOf(addressParts[1]));
-					final PoolMemberDescription description = PoolMemberDescription
-							.fromJsonish(member.getDescription())
-							.orElse(new PoolMemberDescription());
-					LOGGER.info("Registering existing route from F5 for host {} with target {}", host, address);
-					routeRegistrar.insertRoute(
-							host,
-							address,
-							description.getApplicationGuid(),
-							description.getApplicationIndex(),
-							description.getPrivateInstanceId());
-				}));
+				.forEach(pool -> pool.getMembers().ifPresent(members ->
+						members.forEach(member -> {
+							final String host = pool.getName().substring(poolNamePrefix.length());
+							final String[] addressParts = member.getName().split(":");
+							final InetSocketAddress address = InetSocketAddress.createUnresolved(addressParts[0], Integer.valueOf(addressParts[1]));
+							final PoolMemberDescription description = PoolMemberDescription
+									.fromJsonish(member.getDescription())
+									.orElse(new PoolMemberDescription());
+							LOGGER.info("Registering existing route from F5 for host {} with target {}", host, address);
+							routeRegistrar.insertRoute(
+									host,
+									address,
+									description.getApplicationGuid(),
+									description.getApplicationIndex(),
+									description.getPrivateInstanceId());
+						})));
 
 	}
 
@@ -77,7 +78,10 @@ public class Agent {
 		final Pool pool = Pool.create()
 				.name(poolName)
 				.description(poolDescriptionJsonish)
+						// TODO Provide mechanism to make monitor configurable
 				.monitor(Monitors.TCP_HALF_OPEN)
+						// TODO Make reselect tries configurable
+				.reselectTries(3)
 				.build();
 
 		boolean poolCreated = false;
@@ -128,23 +132,23 @@ public class Agent {
 	private void updatePoolMemberDescription(String poolName, RouteDetails route) {
 		final Pool pool = client.getPool(poolName);
 		pool.getMembers().ifPresent(members -> members.stream()
-			.filter(member -> member.getName().equals(route.getAddress().toString()))
-			.findFirst()
-			.ifPresent(member -> {
-				final Optional<PoolMemberDescription> existingDescription = PoolMemberDescription.fromJsonish(member.getDescription());
-				final PoolMemberDescription desiredDescription = new PoolMemberDescription(route);
-				boolean update = true;
-				if (existingDescription.isPresent()) {
-					final PoolMemberDescription description = existingDescription.get();
-					desiredDescription.setCreated(description.getCreated());
-					desiredDescription.setModified(description.getModified());
-					update = !desiredDescription.equals(description);
-				}
-				if (update) {
-					desiredDescription.setModified(Instant.now());
-					client.updatePoolMemberDescription(poolName, route.getAddress(), desiredDescription.toJsonish());
-				}
-			}));
+				.filter(member -> member.getName().equals(route.getAddress().toString()))
+				.findFirst()
+				.ifPresent(member -> {
+					final Optional<PoolMemberDescription> existingDescription = PoolMemberDescription.fromJsonish(member.getDescription());
+					final PoolMemberDescription desiredDescription = new PoolMemberDescription(route);
+					boolean update = true;
+					if (existingDescription.isPresent()) {
+						final PoolMemberDescription description = existingDescription.get();
+						desiredDescription.setCreated(description.getCreated());
+						desiredDescription.setModified(description.getModified());
+						update = !desiredDescription.equals(description);
+					}
+					if (update) {
+						desiredDescription.setModified(Instant.now());
+						client.updatePoolMemberDescription(poolName, route.getAddress(), desiredDescription.toJsonish());
+					}
+				}));
 	}
 
 }

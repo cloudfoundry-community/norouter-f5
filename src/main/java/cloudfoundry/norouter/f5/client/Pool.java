@@ -35,12 +35,14 @@ public class Pool extends JsonObject {
 	private final String description;
 	private final String monitor;
 	private final SubCollection<PoolMember> poolMembers;
+	private final Integer reselectTries;
 
 	public static class Builder {
 		private String name;
 		private String description;
 		private String monitor;
 		private Collection<PoolMember> poolMembers = new ArrayList<>();
+		private Integer reselectTries;
 
 		public Builder name(String name) {
 			this.name = name;
@@ -74,6 +76,11 @@ public class Pool extends JsonObject {
 			return this;
 		}
 
+		public Builder reselectTries(Integer reselectTries) {
+			this.reselectTries = reselectTries;
+			return this;
+		}
+
 		public Pool build() {
 			return new Pool(this);
 		}
@@ -88,6 +95,7 @@ public class Pool extends JsonObject {
 		description = builder.description;
 		monitor = builder.monitor;
 		poolMembers = new SubCollection<>(null, builder.poolMembers);
+		reselectTries = builder.reselectTries;
 	}
 
 	@JsonCreator
@@ -95,12 +103,14 @@ public class Pool extends JsonObject {
 			@JsonProperty("name") String name,
 			@JsonProperty("description") String description,
 			@JsonProperty("monitor") String monitor,
-			@JsonProperty("membersReference") SubCollection<PoolMember> poolMembers
+			@JsonProperty("membersReference") SubCollection<PoolMember> poolMembers,
+	        @JsonProperty("reselectTries") Integer reselectTries
 	) {
 		this.name = name;
 		this.description = description;
 		this.monitor = monitor;
 		this.poolMembers = poolMembers;
+		this.reselectTries = reselectTries;
 	}
 
 	public String getName() {
@@ -113,6 +123,10 @@ public class Pool extends JsonObject {
 
 	public String getMonitor() {
 		return monitor;
+	}
+
+	public Integer getReselectTries() {
+		return reselectTries;
 	}
 
 	@JsonIgnore
