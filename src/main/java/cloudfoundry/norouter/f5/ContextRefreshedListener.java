@@ -17,22 +17,23 @@
 package cloudfoundry.norouter.f5;
 
 import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.ContextStartedEvent;
 import org.springframework.core.Ordered;
 
 /**
  * @author Mike Heath
  */
-public class ContextStartedListener implements ApplicationListener<ContextStartedEvent>, Ordered {
+public class ContextRefreshedListener implements ApplicationListener<ContextRefreshedEvent>, Ordered {
 
 	private final Agent agent;
 
-	public ContextStartedListener(Agent agent) {
+	public ContextRefreshedListener(Agent agent) {
 		this.agent = agent;
 	}
 
 	@Override
-	public void onApplicationEvent(ContextStartedEvent event) {
+	public void onApplicationEvent(ContextRefreshedEvent event) {
 		agent.populateRouteRegistrar();
 	}
 

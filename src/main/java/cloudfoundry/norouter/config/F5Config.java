@@ -17,7 +17,7 @@
 package cloudfoundry.norouter.config;
 
 import cloudfoundry.norouter.f5.Agent;
-import cloudfoundry.norouter.f5.ContextStartedListener;
+import cloudfoundry.norouter.f5.ContextRefreshedListener;
 import cloudfoundry.norouter.f5.RouteRegisterListener;
 import cloudfoundry.norouter.f5.RouteUnregisterListener;
 import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
@@ -67,7 +67,7 @@ public class F5Config {
 	}
 
 	@Bean
-	ContextStartedListener f5contextStartedListener(Agent agent) {
-		return new ContextStartedListener(agent);
+	ContextRefreshedListener f5contextStartedListener(Agent agent) {
+		return new ContextRefreshedListener(agent);
 	}
 }
