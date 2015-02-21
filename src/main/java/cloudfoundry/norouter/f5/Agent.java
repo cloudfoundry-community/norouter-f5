@@ -22,9 +22,15 @@ import cloudfoundry.norouter.f5.client.Monitors;
 import cloudfoundry.norouter.f5.client.Pool;
 import cloudfoundry.norouter.f5.client.ResourceNotFoundException;
 import cloudfoundry.norouter.routingtable.RouteDetails;
+import cloudfoundry.norouter.routingtable.RouteRegisterEvent;
 import cloudfoundry.norouter.routingtable.RouteRegistrar;
+import cloudfoundry.norouter.routingtable.RouteUnregisterEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.Ordered;
 
 import java.net.InetSocketAddress;
 import java.time.Instant;
@@ -33,7 +39,7 @@ import java.util.Optional;
 /**
  * @author Mike Heath
  */
-public class Agent {
+public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Agent.class);
 
@@ -151,4 +157,19 @@ public class Agent {
 				}));
 	}
 
+	@Override
+	public void onApplicationEvent(ApplicationEvent event) {
+		if (event instanceof RouteRegisterEvent) {
+			registerRoute((RouteDetails) event);
+		} else if (event instanceof RouteUnregisterEvent) {
+			unregisterRoute((RouteDetails) event);
+		} else if (event instanceof ContextRefreshedEvent) {
+			populateRouteRegistrar();
+		}
+	}
+
+	@Override
+	public int getOrder() {
+		return 0;
+	}
 }

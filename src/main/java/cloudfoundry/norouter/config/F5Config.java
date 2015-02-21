@@ -17,13 +17,12 @@
 package cloudfoundry.norouter.config;
 
 import cloudfoundry.norouter.f5.Agent;
-import cloudfoundry.norouter.f5.ContextRefreshedListener;
-import cloudfoundry.norouter.f5.RouteRegisterListener;
-import cloudfoundry.norouter.f5.RouteUnregisterListener;
 import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
 import cloudfoundry.norouter.f5.client.IControlClient;
 import cloudfoundry.norouter.routingtable.RouteRegistrar;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -31,7 +30,11 @@ import org.springframework.context.annotation.Configuration;
  * @author Mike Heath
  */
 @Configuration
+@EnableConfigurationProperties(F5ConfigProperties.class)
 public class F5Config {
+
+	@Autowired
+	F5ConfigProperties f5properties;
 
 	@Bean
 	HttpClientIControlClient iControlClient(
@@ -50,24 +53,9 @@ public class F5Config {
 
 	@Bean
 	Agent f5Agent(
-			@Value("${f5.poolNamePrefix:pool_cf_}") String poolNamePrefix,
 			IControlClient client,
 			RouteRegistrar routeRegistrar) {
-		return new Agent(poolNamePrefix, client, routeRegistrar);
+		return new Agent(f5properties.getPoolNamePrefix(), client, routeRegistrar);
 	}
 
-	@Bean
-	RouteRegisterListener f5routeRegisterListener(Agent agent) {
-		return new RouteRegisterListener(agent);
-	}
-
-	@Bean
-	RouteUnregisterListener f5routeUnregisterListener(Agent agent) {
-		return new RouteUnregisterListener(agent);
-	}
-
-	@Bean
-	ContextRefreshedListener f5contextStartedListener(Agent agent) {
-		return new ContextRefreshedListener(agent);
-	}
 }

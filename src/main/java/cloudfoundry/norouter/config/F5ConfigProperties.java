@@ -14,31 +14,23 @@
  *    limitations under the License.
  */
 
-package cloudfoundry.norouter.f5;
+package cloudfoundry.norouter.config;
 
-import cloudfoundry.norouter.routingtable.RouteUnregisterEvent;
-import org.springframework.context.ApplicationListener;
-import org.springframework.core.Ordered;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * @author Mike Heath
  */
-public class RouteUnregisterListener implements ApplicationListener<RouteUnregisterEvent>, Ordered {
+@ConfigurationProperties(prefix = "f5")
+public class F5ConfigProperties {
 
-	private final Agent agent;
+	private String poolNamePrefix = "pool_cf_";
 
-	public RouteUnregisterListener(Agent agent) {
-		this.agent = agent;
+	public String getPoolNamePrefix() {
+		return poolNamePrefix;
 	}
 
-	@Override
-	public void onApplicationEvent(RouteUnregisterEvent event) {
-		agent.unregisterRoute(event);
+	public void setPoolNamePrefix(String poolNamePrefix) {
+		this.poolNamePrefix = poolNamePrefix;
 	}
-
-	@Override
-	public int getOrder() {
-		return 0;
-	}
-
 }
