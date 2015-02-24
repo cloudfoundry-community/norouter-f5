@@ -69,4 +69,8 @@
 		</dependency>
 	</dependencies>
 
+	<build>
+		<finalName>norouter-f5</finalName>
+	</build>
+
 </project>
