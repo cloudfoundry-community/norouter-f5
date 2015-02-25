@@ -20,6 +20,8 @@ import cloudfoundry.norouter.f5.Agent;
 import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
 import cloudfoundry.norouter.f5.client.IControlClient;
 import cloudfoundry.norouter.routingtable.RouteRegistrar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -32,6 +34,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties(F5ConfigProperties.class)
 public class F5Config {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(F5Config.class);
 
 	@Autowired
 	F5ConfigProperties f5properties;
@@ -55,7 +59,9 @@ public class F5Config {
 	Agent f5Agent(
 			IControlClient client,
 			RouteRegistrar routeRegistrar) {
-		return new Agent(f5properties.getPoolNamePrefix(), client, routeRegistrar);
+		final String poolNamePrefix = f5properties.getPoolNamePrefix();
+		LOGGER.debug("Pool name prefix {}", poolNamePrefix);
+		return new Agent(poolNamePrefix, client, routeRegistrar);
 	}
 
 }
