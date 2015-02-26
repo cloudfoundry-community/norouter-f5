@@ -16,52 +16,13 @@
 
 package cloudfoundry.norouter.config;
 
-import cloudfoundry.norouter.f5.Agent;
-import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
-import cloudfoundry.norouter.f5.client.IControlClient;
-import cloudfoundry.norouter.routingtable.RouteRegistrar;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * @author Mike Heath
  */
 @Configuration
-@EnableConfigurationProperties(F5ConfigProperties.class)
+@Import(F5AgentBeanDefinitionRegistrar.class)
 public class F5Config {
-
-	private static final Logger LOGGER = LoggerFactory.getLogger(F5Config.class);
-
-	@Autowired
-	F5ConfigProperties f5properties;
-
-	@Bean
-	HttpClientIControlClient iControlClient(
-			@Value("${ssl.skip_cert_verify:true}") boolean skipVerifyTls,
-	        @Value("${f5.url:slb-diz-dev-a.ldschurch.org}") String url,
-	        @Value("${f5.user}") String user,
-			@Value("${f5.password}") String password
-	) {
-		return HttpClientIControlClient.create()
-				.skipVerifyTls(skipVerifyTls)
-				.url(url)
-				.user(user)
-				.password(password)
-				.build();
-	}
-
-	@Bean
-	Agent f5Agent(
-			IControlClient client,
-			RouteRegistrar routeRegistrar) {
-		final String poolNamePrefix = f5properties.getPoolNamePrefix();
-		LOGGER.debug("Pool name prefix {}", poolNamePrefix);
-		return new Agent(poolNamePrefix, client, routeRegistrar);
-	}
-
 }
