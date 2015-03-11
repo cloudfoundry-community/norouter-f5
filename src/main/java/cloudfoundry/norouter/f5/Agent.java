@@ -20,6 +20,7 @@ import cloudfoundry.norouter.f5.client.ConflictException;
 import cloudfoundry.norouter.f5.client.IControlClient;
 import cloudfoundry.norouter.f5.client.Monitors;
 import cloudfoundry.norouter.f5.client.Pool;
+import cloudfoundry.norouter.f5.client.PoolMember;
 import cloudfoundry.norouter.f5.client.ResourceNotFoundException;
 import cloudfoundry.norouter.routingtable.RouteDetails;
 import cloudfoundry.norouter.routingtable.RouteRegisterEvent;
@@ -31,9 +32,12 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -43,6 +47,8 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Agent.class);
 
+	private static final Duration POOL_STALE_TIME = Duration.ofMinutes(5);
+
 	private final String poolNamePrefix;
 	private final IControlClient client;
 	private final RouteRegistrar routeRegistrar;
@@ -51,6 +57,24 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 		this.poolNamePrefix = poolNamePrefix;
 		this.client = client;
 		this.routeRegistrar = routeRegistrar;
+	}
+
+	@Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 30 * 60 * 1000) // Check for stale pools every 30 minutes
+	public void removeStalePools() {
+		LOGGER.info("Checking for stale pools prefixed with {}", poolNamePrefix);
+		client.getAllPools(true).stream()
+				.filter(pool -> pool.getName().startsWith(poolNamePrefix))
+				.filter(pool -> !pool.getMembers().isPresent() || pool.getMembers().get().size() == 0)
+				.filter(pool -> {
+					// Filter out non stale pools.
+					final Optional<PoolDescription> description = PoolDescription.fromJsonish(pool.getDescription());
+					if (description.isPresent()) {
+						final Duration timeSinceModified = Duration.between(description.get().getModified(), Instant.now());
+						return POOL_STALE_TIME.compareTo(timeSinceModified) < 0;
+					}
+					return false;
+				})
+				.forEach(pool -> safeDeletePool(pool.getName()));
 	}
 
 	public void populateRouteRegistrar() {
@@ -72,7 +96,6 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 									description.getApplicationIndex(),
 									description.getPrivateInstanceId());
 						})));
-
 	}
 
 	public void registerRoute(RouteDetails route) {
@@ -116,15 +139,28 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 		}
 	}
 
-	public void unregisterRoute(RouteDetails route) {
-		final String poolName = poolNamePrefix + route.getHost();
+	public void unregisterRoute(RouteUnregisterEvent unregisterEvent) {
+		final String poolName = poolNamePrefix + unregisterEvent.getHost();
+		boolean removedPoolMember = false;
 		try {
-			LOGGER.info("Removing pool member {} from pool {}", route.getAddress(), poolName);
-			client.deletePoolMember(poolName, route.getAddress());
-			updatePoolModifiedTimestamp(poolName);
-			LOGGER.debug("Updated modified field on pool {}", poolName);
+			LOGGER.info("Removing pool member {} from pool {}", unregisterEvent.getAddress(), poolName);
+			client.deletePoolMember(poolName, unregisterEvent.getAddress());
+			removedPoolMember = true;
 		} catch (ResourceNotFoundException e) {
-			// Member was already removed
+			// The pool member was already removed
+		}
+
+		boolean deletedPool = false;
+		try {
+			if (unregisterEvent.isLast()) {
+				deletedPool = safeDeletePool(poolName);
+			}
+			if (!deletedPool && removedPoolMember) {
+				updatePoolModifiedTimestamp(poolName);
+				LOGGER.debug("Updated modified field on pool {}", poolName);
+			}
+		} catch (ResourceNotFoundException e) {
+			// The pool was already removed
 		}
 	}
 
@@ -157,13 +193,36 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 				}));
 	}
 
+	private boolean safeDeletePool(String name) {
+		try {
+			final Pool pool = client.getPool(name);
+			final Optional<Collection<PoolMember>> members = pool.getMembers();
+			if (members.isPresent() && members.get().size() > 0) {
+				LOGGER.info("Can not delete pool {} because it still has pool members.", name);
+				return false;
+			}
+			final Optional<PoolDescription> description = PoolDescription.fromJsonish(pool.getDescription());
+			if (description.isPresent()) {
+				client.deletePool(name);
+				LOGGER.info("Deleted pool {}", name);
+				return true;
+			} else {
+				LOGGER.info("Can not delete pool {} because it has a missing/invalid description.", name);
+			}
+			return false;
+		} catch (ResourceNotFoundException e) {
+			return false;
+		}
+	}
+
 	@Override
 	public void onApplicationEvent(ApplicationEvent event) {
 		if (event instanceof RouteRegisterEvent) {
 			registerRoute((RouteDetails) event);
 		} else if (event instanceof RouteUnregisterEvent) {
-			unregisterRoute((RouteDetails) event);
+			unregisterRoute((RouteUnregisterEvent) event);
 		} else if (event instanceof ContextRefreshedEvent) {
+			removeStalePools();
 			populateRouteRegistrar();
 		}
 	}

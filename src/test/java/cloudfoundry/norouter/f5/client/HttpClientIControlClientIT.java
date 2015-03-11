@@ -162,6 +162,11 @@ public class HttpClientIControlClientIT {
 		client.getPool("YoDawgIHeardYouLikePools");
 	}
 
+	@Test(expectedExceptions = ResourceNotFoundException.class)
+	public void deletePoolMemberThatDoesNotExist() {
+		client.deletePoolMember("somepoolthatbetternotexist", "0.0.0.0:1");
+	}
+
 	private PoolMember assertPoolMemberPresent(Collection<PoolMember> poolMembers, String address) {
 		final Optional<PoolMember> first = poolMembers.stream()
 				.filter(p -> p.getName().equals(address))

@@ -18,6 +18,8 @@ package cloudfoundry.norouter.config;
 
 import cloudfoundry.norouter.f5.Agent;
 import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -32,6 +34,8 @@ import org.springframework.util.StringUtils;
  */
 class F5AgentBeanDefinitionRegistrar implements EnvironmentAware, ImportBeanDefinitionRegistrar {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(F5AgentBeanDefinitionRegistrar.class);
+
 	private Environment environment;
 
 	@Override
@@ -39,6 +43,9 @@ class F5AgentBeanDefinitionRegistrar implements EnvironmentAware, ImportBeanDefi
 		for (int i = 0; true; i++) {
 			final LtmProperties properties = extractProperties(i);
 			if (properties == null) {
+				if (i == 0) {
+					LOGGER.warn("Missing LTM configuration. Could not find property array 'f5.ltm'");
+				}
 				break;
 			}
 			final AbstractBeanDefinition clientBeanDefinition = BeanDefinitionBuilder.genericBeanDefinition(F5AgentBeanDefinitionRegistrar.class)
@@ -72,7 +79,7 @@ class F5AgentBeanDefinitionRegistrar implements EnvironmentAware, ImportBeanDefi
 		if (StringUtils.isEmpty(url)) {
 			return null;
 		}
-		final String poolNamePrefix = environment.getProperty(prefix + "poolNamePrefix");
+		final String poolNamePrefix = environment.getProperty(prefix + "poolNamePrefix", "_cf_managed_");
 		final String user = environment.getProperty(prefix + "user");
 		final String password = environment.getProperty(prefix + "password");
 		return new LtmProperties(poolNamePrefix, url, user, password);
