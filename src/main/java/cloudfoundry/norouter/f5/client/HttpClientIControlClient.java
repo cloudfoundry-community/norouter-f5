@@ -35,9 +35,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
@@ -129,8 +131,9 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 		final HttpGet request = new HttpGet(address.resolve(uri));
 		try (final CloseableHttpResponse response = httpClient.execute(request)) {
 			final StatusLine statusLine = response.getStatusLine();
-			validateResponse(statusLine.getStatusCode(), statusLine.getReasonPhrase(), 200);
-			return mapper.readTree(response.getEntity().getContent());
+			final String responseBody = StreamUtils.copyToString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+			validateResponse(statusLine.getStatusCode(), statusLine.getReasonPhrase(), responseBody, 200);
+			return mapper.readTree(responseBody);
 		} catch (IOException e) {
 			throw new IControlException(e);
 		}
@@ -164,8 +167,9 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 			request.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
 			try (final CloseableHttpResponse response = httpClient.execute(request)) {
 				final StatusLine statusLine = response.getStatusLine();
-				validateResponse(statusLine.getStatusCode(), statusLine.getReasonPhrase(), 200);
-				return mapper.readTree(response.getEntity().getContent());
+				final String responseBody = StreamUtils.copyToString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+				validateResponse(statusLine.getStatusCode(), statusLine.getReasonPhrase(), responseBody, 200);
+				return mapper.readTree(responseBody);
 			}
 		} catch (IOException e) {
 			throw new IControlException(e);
@@ -179,7 +183,7 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 			final HttpDelete request = new HttpDelete(address.resolve(uri));
 			try (final CloseableHttpResponse response = httpClient.execute(request)) {
 				final StatusLine statusLine = response.getStatusLine();
-				validateResponse(statusLine.getStatusCode(), statusLine.getReasonPhrase(), 200);
+				validateResponse(statusLine.getStatusCode(), statusLine.getReasonPhrase(), "", 200);
 			}
 		} catch (IOException e) {
 			throw new IControlException(e);

@@ -33,9 +33,13 @@ public abstract class AbstractIControlClient implements IControlClient {
 	protected static final String EXPAND_SUBCOLLECTIONS = "?expandSubcollections=true";
 	protected static final String POOL_URI = "/mgmt/tm/ltm/pool";
 
+
 	protected final URI address;
 
 	protected final ObjectMapper mapper = new ObjectMapper();
+	protected final JsonNode DISABLE_POOL_MEMBER_BODY = mapper.createObjectNode()
+//			.put("state", "user-down")
+			.put("session", "user-disabled");
 
 	protected AbstractIControlClient(URI address) {
 		this.address = address;
@@ -76,18 +80,18 @@ public abstract class AbstractIControlClient implements IControlClient {
 	}
 
 	@Override
-	public void addPoolMember(String poolName, InetSocketAddress poolMember) {
-		addPoolMember(poolName, poolMember, null);
+	public PoolMember addPoolMember(String poolName, InetSocketAddress poolMember) {
+		return addPoolMember(poolName, poolMember, null);
 	}
 
 	@Override
-	public void addPoolMember(String poolName, InetSocketAddress poolMember, String description) {
-		addPoolMember(poolName, poolMember.toString(), description);
+	public PoolMember addPoolMember(String poolName, InetSocketAddress poolMember, String description) {
+		return addPoolMember(poolName, poolMember.toString(), description);
 	}
 
 	@Override
-	public void addPoolMember(String poolName, String poolMember) {
-		addPoolMember(poolName, poolMember, null);
+	public PoolMember addPoolMember(String poolName, String poolMember) {
+		return addPoolMember(poolName, poolMember, null);
 	}
 
 	@Override
@@ -121,12 +125,19 @@ public abstract class AbstractIControlClient implements IControlClient {
 		return readValue(resource, PoolMember.class);
 	}
 
+	@Override
+	public PoolMember disablePoolMember(String poolName, InetSocketAddress member) {
+		final String uri = membersUri(poolName) + "/" + member.toString();
+		final JsonNode resource = putResource(uri, DISABLE_POOL_MEMBER_BODY);
+		return readValue(resource, PoolMember.class);
+	}
+
 	protected abstract JsonNode getResource(String uri);
 	protected abstract JsonNode postResource(String uri, Object resource);
 	protected abstract JsonNode putResource(String uri, Object resource);
 	protected abstract void deleteResource(String uri);
 
-	protected void validateResponse(int statusCode, String reason, int... expectedStatusCodes) {
+	protected void validateResponse(int statusCode, String reason, String body, int... expectedStatusCodes) {
 		for (int code : expectedStatusCodes) {
 			if (code == statusCode) {
 				return;
@@ -140,7 +151,7 @@ public abstract class AbstractIControlClient implements IControlClient {
 			case 409:
 				throw new ConflictException(reason);
 			default:
-				throw new IControlException("Unexpected response: " + statusCode + " " + reason);
+				throw new IControlException("Unexpected response: " + statusCode + " " + reason + "(" + body + ")");
 		}
 	}
 

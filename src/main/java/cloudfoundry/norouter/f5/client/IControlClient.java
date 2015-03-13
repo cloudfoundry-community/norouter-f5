@@ -35,11 +35,11 @@ public interface IControlClient extends AutoCloseable {
 
 	Collection<Pool> getAllPools(boolean fetchPoolMembers);
 
-	void addPoolMember(String poolName, InetSocketAddress poolMember);
+	PoolMember addPoolMember(String poolName, InetSocketAddress poolMember);
 
-	void addPoolMember(String poolName, InetSocketAddress poolMember, String description);
+	PoolMember addPoolMember(String poolName, InetSocketAddress poolMember, String description);
 
-	void addPoolMember(String poolName, String poolMember);
+	PoolMember addPoolMember(String poolName, String poolMember);
 
 	PoolMember addPoolMember(String poolName, String poolMember, String description);
 
@@ -50,4 +50,6 @@ public interface IControlClient extends AutoCloseable {
 	Pool updatePoolDescription(String poolName, String description);
 
 	PoolMember updatePoolMemberDescription(String poolName, InetSocketAddress member, String description);
+
+	PoolMember disablePoolMember(String poolName, InetSocketAddress poolMember);
 }

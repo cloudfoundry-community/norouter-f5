@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -165,6 +166,27 @@ public class HttpClientIControlClientIT {
 	@Test(expectedExceptions = ResourceNotFoundException.class)
 	public void deletePoolMemberThatDoesNotExist() {
 		client.deletePoolMember("somepoolthatbetternotexist", "0.0.0.0:1");
+	}
+
+	@Test
+	public void disablePoolMember() {
+		final String poolName = "Rest-Client-Test-" + UUID.randomUUID().toString();
+		final String description = "If you're reading this, please delete this pool.";
+		final Pool pool = Pool.create()
+				.name(poolName)
+				.description(description)
+				.build();
+		client.createPool(pool);
+		try {
+			final InetSocketAddress poolMember = InetSocketAddress.createUnresolved("1.2.2.1", 80);
+
+			client.addPoolMember(poolName, poolMember);
+
+			final PoolMember disabledPoolMember = client.disablePoolMember(poolName, poolMember);
+			assertFalse(disabledPoolMember.isEnabled());
+		} finally {
+			client.deletePool(poolName);
+		}
 	}
 
 	private PoolMember assertPoolMemberPresent(Collection<PoolMember> poolMembers, String address) {

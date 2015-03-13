@@ -17,6 +17,7 @@ package cloudfoundry.norouter.f5.client;
 
 import cf.common.JsonObject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -40,5 +41,10 @@ public class PoolMember extends JsonObject {
 
 	public String getDescription() {
 		return description;
+	}
+
+	@JsonIgnore
+	public boolean isEnabled() {
+		return "user-enabled".equals(any().get("session"));
 	}
 }
