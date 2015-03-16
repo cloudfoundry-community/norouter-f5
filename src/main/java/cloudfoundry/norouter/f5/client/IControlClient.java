@@ -21,6 +21,7 @@ import java.util.Collection;
 /**
  * @author Mike Heath <elcapo@gmail.com>
  */
+// TODO Add support for getting pool/pool member stats
 public interface IControlClient extends AutoCloseable {
 	@Override
 	void close();
