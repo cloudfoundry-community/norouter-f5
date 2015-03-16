@@ -32,18 +32,21 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.Ordered;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Mike Heath
  */
-public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
+// TODO Should we loggregate when pool members are added/removed?
+public class Agent implements ApplicationListener<ApplicationEvent>, Ordered, AutoCloseable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Agent.class);
 
@@ -53,13 +56,20 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 	private final IControlClient client;
 	private final RouteRegistrar routeRegistrar;
 
+	private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
 	public Agent(String poolNamePrefix, IControlClient client, RouteRegistrar routeRegistrar) {
 		this.poolNamePrefix = poolNamePrefix;
 		this.client = client;
 		this.routeRegistrar = routeRegistrar;
+		scheduler.scheduleAtFixedRate(this::removeStalePools, 30, 30, TimeUnit.MINUTES);
 	}
 
-	@Scheduled(fixedRate = 30 * 60 * 1000, initialDelay = 30 * 60 * 1000) // Check for stale pools every 30 minutes
+	@Override
+	public void close() throws Exception {
+		scheduler.shutdownNow().forEach(Runnable::run);
+	}
+
 	public void removeStalePools() {
 		LOGGER.info("Checking for stale pools prefixed with {}", poolNamePrefix);
 		client.getAllPools(true).stream()
@@ -141,27 +151,37 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 
 	public void unregisterRoute(RouteUnregisterEvent unregisterEvent) {
 		final String poolName = poolNamePrefix + unregisterEvent.getHost();
-		boolean removedPoolMember = false;
-		try {
-			LOGGER.info("Removing pool member {} from pool {}", unregisterEvent.getAddress(), poolName);
-			client.deletePoolMember(poolName, unregisterEvent.getAddress());
-			removedPoolMember = true;
-		} catch (ResourceNotFoundException e) {
-			// The pool member was already removed
-		}
+		final InetSocketAddress poolMember = unregisterEvent.getAddress();
 
-		boolean deletedPool = false;
-		try {
-			if (unregisterEvent.isLast()) {
-				deletedPool = safeDeletePool(poolName);
+		// Disable the pool member
+		LOGGER.info("Disabling pool member () from pool {}", poolMember, poolName);
+		client.disablePoolMember(poolName, poolMember);
+
+		// Delete the pool member one minute later
+		// TODO Check connection count and delete pool member sooner if it doesn't have any connections
+		scheduler.schedule(() -> {
+			boolean removedPoolMember = false;
+			try {
+				LOGGER.info("Removing pool member {} from pool {}", poolMember, poolName);
+				client.deletePoolMember(poolName, poolMember);
+				removedPoolMember = true;
+			} catch (ResourceNotFoundException e) {
+				// The pool member was already removed
 			}
-			if (!deletedPool && removedPoolMember) {
-				updatePoolModifiedTimestamp(poolName);
-				LOGGER.debug("Updated modified field on pool {}", poolName);
+
+			boolean deletedPool = false;
+			try {
+				if (unregisterEvent.isLast()) {
+					deletedPool = safeDeletePool(poolName);
+				}
+				if (!deletedPool && removedPoolMember) {
+					updatePoolModifiedTimestamp(poolName);
+					LOGGER.debug("Updated modified field on pool {}", poolName);
+				}
+			} catch (ResourceNotFoundException e) {
+				// The pool was already removed
 			}
-		} catch (ResourceNotFoundException e) {
-			// The pool was already removed
-		}
+		}, 1, TimeUnit.MINUTES);
 	}
 
 	private void updatePoolModifiedTimestamp(String poolName) {
@@ -220,6 +240,7 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 		if (event instanceof RouteRegisterEvent) {
 			registerRoute((RouteDetails) event);
 		} else if (event instanceof RouteUnregisterEvent) {
+			// TODO Differentiate unregister events from timeout events
 			unregisterRoute((RouteUnregisterEvent) event);
 		} else if (event instanceof ContextRefreshedEvent) {
 			removeStalePools();
@@ -231,4 +252,5 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered {
 	public int getOrder() {
 		return 0;
 	}
+
 }
