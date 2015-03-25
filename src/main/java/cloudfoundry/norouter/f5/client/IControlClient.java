@@ -26,6 +26,22 @@ public interface IControlClient extends AutoCloseable {
 	@Override
 	void close();
 
+	IRule createIRule(String name, String body) throws ConflictException;
+
+	IRule getIRule(String name) throws ResourceNotFoundException;
+
+	IRule updateIRule(String name, String body) throws ResourceNotFoundException;
+
+	void deleteIRule(String name);
+
+	default IRule createOrUpdateIRule(String name, String body) throws ResourceNotFoundException {
+		try {
+			return createIRule(name, body);
+		} catch (ConflictException e) {
+			return updateIRule(name, body);
+		}
+	}
+
 	Pool createPool(Pool pool);
 
 	Pool getPool(String name);
@@ -53,4 +69,5 @@ public interface IControlClient extends AutoCloseable {
 	PoolMember updatePoolMemberDescription(String poolName, InetSocketAddress member, String description);
 
 	PoolMember disablePoolMember(String poolName, InetSocketAddress poolMember);
+
 }

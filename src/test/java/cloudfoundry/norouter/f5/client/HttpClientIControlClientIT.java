@@ -189,6 +189,19 @@ public class HttpClientIControlClientIT {
 		}
 	}
 
+	@Test
+	public void createIRule() {
+		final String name = "TestIRule-" + UUID.randomUUID().toString();
+		final String body = "# If you're reading this, delete this iRule.\nwhen HTTP_REQUEST {}";
+		try {
+			final IRule iRule = client.createIRule(name, body);
+			assertEquals(iRule.getName(), name);
+			assertEquals(iRule.getBody(), body);
+		} finally {
+			client.deleteIRule(name);
+		}
+	}
+
 	private PoolMember assertPoolMemberPresent(Collection<PoolMember> poolMembers, String address) {
 		final Optional<PoolMember> first = poolMembers.stream()
 				.filter(p -> p.getName().equals(address))

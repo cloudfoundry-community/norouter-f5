@@ -16,6 +16,8 @@
 package cloudfoundry.norouter.f5.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.http.Header;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.AuthScope;
@@ -47,6 +49,7 @@ import java.util.Objects;
  */
 public class HttpClientIControlClient extends AbstractIControlClient {
 
+	private static final String APPLICATION_JSON = "application/json";
 	private static Logger LOGGER = LoggerFactory.getLogger(HttpClientIControlClient.class);
 
 	private final CloseableHttpClient httpClient;
@@ -70,9 +73,9 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 			Objects.requireNonNull(address);
 			final String userInfo = address.getUserInfo();
 			if (userInfo != null) {
-				final int seperatorIndex = userInfo.indexOf(':');
-				this.user = userInfo.substring(0, seperatorIndex);
-				this.password = userInfo.substring(seperatorIndex + 1);
+				final int separatorIndex = userInfo.indexOf(':');
+				this.user = userInfo.substring(0, separatorIndex);
+				this.password = userInfo.substring(separatorIndex + 1);
 			}
 			this.url = address;
 			return this;
@@ -164,7 +167,8 @@ public class HttpClientIControlClient extends AbstractIControlClient {
 			} else {
 				throw new IllegalArgumentException("Don't know what to do with method " + method);
 			}
-			request.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
+			request.setHeader(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON);
+			request.setEntity(new StringEntity(body, StandardCharsets.UTF_8));
 			try (final CloseableHttpResponse response = httpClient.execute(request)) {
 				final StatusLine statusLine = response.getStatusLine();
 				final String responseBody = StreamUtils.copyToString(response.getEntity().getContent(), StandardCharsets.UTF_8);

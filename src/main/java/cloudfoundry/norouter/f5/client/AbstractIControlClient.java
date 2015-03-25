@@ -31,18 +31,44 @@ import java.util.Collections;
 public abstract class AbstractIControlClient implements IControlClient {
 
 	protected static final String EXPAND_SUBCOLLECTIONS = "?expandSubcollections=true";
-	protected static final String POOL_URI = "/mgmt/tm/ltm/pool";
+	protected static final String LTM_URI = "/mgmt/tm/ltm";
+	protected static final String IRULE_URI = LTM_URI + "/rule";
+	protected static final String POOL_URI = LTM_URI + "/pool";
 
 
 	protected final URI address;
 
 	protected final ObjectMapper mapper = new ObjectMapper();
 	protected final JsonNode DISABLE_POOL_MEMBER_BODY = mapper.createObjectNode()
-//			.put("state", "user-down")
 			.put("session", "user-disabled");
 
 	protected AbstractIControlClient(URI address) {
 		this.address = address;
+	}
+
+	@Override
+	public IRule createIRule(String name, String body) {
+		final JsonNode createdRule = postResource(IRULE_URI, new IRule(name, body));
+		return readValue(createdRule, IRule.class);
+	}
+
+	@Override
+	public IRule getIRule(String name) throws ResourceNotFoundException {
+		final String uri = IRULE_URI + "/" + name;
+		return readValue(getResource(uri), IRule.class);
+	}
+
+	@Override
+	public IRule updateIRule(String name, String body) {
+		final String uri = IRULE_URI + "/" + name;
+		final JsonNode updatedRule = putResource(uri, new IRule(name, body));
+		return readValue(updatedRule, IRule.class);
+	}
+
+	@Override
+	public void deleteIRule(String name) {
+		final String uri = IRULE_URI + "/" + name;
+		deleteResource(uri);
 	}
 
 	@Override

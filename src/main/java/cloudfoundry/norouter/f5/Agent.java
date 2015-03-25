@@ -46,6 +46,7 @@ import java.util.concurrent.TimeUnit;
  * @author Mike Heath
  */
 // TODO Should we loggregate when pool members are added/removed?
+// TODO If we throw an exception adding a route, what do we do?
 public class Agent implements ApplicationListener<ApplicationEvent>, Ordered, AutoCloseable {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Agent.class);
