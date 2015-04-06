@@ -18,6 +18,8 @@
 #    limitations under the License.
 #
 
+# TODO Add support for wildcard routes
+
 when HTTP_REQUEST {
   set host [getfield [HTTP::host] ":" 1]
   set cfPool [string tolower "`poolNamePrefix`$host"]
