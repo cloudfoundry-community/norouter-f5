@@ -45,7 +45,7 @@ public class LineEventDecoder extends MessageToMessageDecoder<ByteBuf> {
 					throw new IllegalStateException("Unknown command " + command);
 			}
 		} catch (Exception e) {
-			buffer.clear();
+			buffer.resetReaderIndex();
 			throw new DecoderException("Invalid line event: " + buffer.toString(StandardCharsets.UTF_8), e);
 		}
 	}

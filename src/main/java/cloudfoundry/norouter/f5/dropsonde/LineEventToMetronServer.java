@@ -15,30 +15,32 @@
  */
 package cloudfoundry.norouter.f5.dropsonde;
 
+import cf.dropsonde.MetronClient;
+import cloudfoundry.norouter.routingtable.RouteDetails;
+import cloudfoundry.norouter.routingtable.RouteRegistrar;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Mike Heath
  */
-// TODO Create codec that creates object instances based on log line from HSL
-// TODO Start with LOG
 // TODO Add support for limiting incoming message to certain CIDR ranges
-// TODO Move to F5 module
-// TODO Can we even support HttpStart, HttpStop, HttpStartStop?
+// TODO Support HttpStart, HttpStop, HttpStartStop events
+// TODO Make port configurable
+// TODO Auto register this norouter with LTM pool used for logging
 public class LineEventToMetronServer {
 
-	public static void main(String[] args) {
-		final EventLoopGroup boss = new NioEventLoopGroup(1);
-		final EventLoopGroup worker = new NioEventLoopGroup(1);
+	private static final Logger LOGGER = LoggerFactory.getLogger(LineEventToMetronServer.class);
 
+	public LineEventToMetronServer(EventLoopGroup boss, EventLoopGroup worker, RouteRegistrar routeRegistrar, MetronClient metronClient) {
 		final ServerBootstrap bootstrap = new ServerBootstrap();
 		bootstrap
 				.group(boss, worker)
@@ -51,21 +53,25 @@ public class LineEventToMetronServer {
 						ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
 							@Override
 							public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-								// TODO Use a logger to log this exception
-								cause.printStackTrace();
+								LOGGER.warn("An error occurred processing logging events from the LTM.", cause);
 								ctx.close();
 							}
 
 							@Override
 							public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-								System.out.println("** New connection from: " + ctx.channel().remoteAddress());
+								LOGGER.info("New connection from {}", ctx.channel().remoteAddress());
 							}
 
 							@Override
 							public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 								if (msg instanceof LogEvent) {
 									final LogEvent logEvent = (LogEvent) msg;
-									System.out.println(logEvent.getTimestamp() + " " + logEvent.getApplicationAddress() + " --- " + logEvent.getMessage());
+									final RouteDetails routeDetails = routeRegistrar.getRouteByAddress(logEvent.getApplicationAddress());
+									if (routeDetails != null && routeDetails.getApplicationGuid() != null) {
+										final String appGuid = routeDetails.getApplicationGuid().toString();
+										final String message = logEvent.getMessage() + " app_id:" + appGuid;
+										metronClient.createLogEmitter("RTR", logEvent.getLtmIdentifier()).emit(logEvent.getTimestamp(), appGuid, message);
+									}
 								} else {
 									super.channelRead(ctx, msg);
 								}
@@ -73,7 +79,9 @@ public class LineEventToMetronServer {
 						});
 					}
 				});
-		bootstrap.bind(8007).syncUninterruptibly();
+		final int port = 8007;
+		bootstrap.bind(port).syncUninterruptibly();
+		LOGGER.info("Listening for logging events from the LTM on port {}", port);
 	}
 
 }
