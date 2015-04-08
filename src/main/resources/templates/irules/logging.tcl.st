@@ -80,7 +80,7 @@ when HTTP_RESPONSE_RELEASE {
   }
   set response_time [format %.03f [expr ([clock clicks -milliseconds] - $cf_logging_client_start) / 1000.0]]
   set log "$cf_logging_host - \[$timestamp\] \"$cf_logging_method $cf_logging_uri HTTP/$cf_logging_http_version\" [HTTP::status] $contentlength \"$cf_logging_referer\" \"$cf_logging_user_agent\" $cf_logging_remote_address vcap_request_id:$cf_requestid response_time:$response_time"
-  HSL::send $cf_logging_handle "LOG dev-ltm $cf_logging_server_address $cf_logging_client_start $cf_requestid $log\n"
+  HSL::send $cf_logging_handle "LOG `ltm_id` $cf_logging_server_address $cf_logging_client_start $cf_requestid $log\n"
 }
 
 proc send_http_start_event {client_server start_stop start_time} {

@@ -104,12 +104,13 @@ public class F5Config implements InitializingBean {
 
 		final String loggingIRule = loggingIRule()
 				.add("logging_pool", properties.getPoolNamePrefix() + "_norouter_loggers")
+				.add("ltm_id", properties.getLtmId())
 				.render();
 		updateIRule(properties.getiRuleNamePrefix() + "logging", loggingIRule);
 	}
 
 	private void updateIRule(String name, String rule) {
-		LOGGER.info("Updating iRule {}");
+		LOGGER.info("Updating iRule {}", name);
 		iControlClient().createOrUpdateIRule(name, rule);
 	}
 }

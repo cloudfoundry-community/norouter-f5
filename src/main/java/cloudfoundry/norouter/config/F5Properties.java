@@ -34,6 +34,8 @@ public class F5Properties {
 	private String poolNamePrefix = "cf-pool_";
 	private String iRuleNamePrefix = "cf-irule_";
 
+	private String ltmId = "f5.ltmId";
+
 	public String getUser() {
 		return user;
 	}
@@ -83,4 +85,11 @@ public class F5Properties {
 	}
 
 
+	public String getLtmId() {
+		return ltmId;
+	}
+
+	public void setLtmId(String ltmId) {
+		this.ltmId = ltmId;
+	}
 }
