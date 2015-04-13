@@ -16,6 +16,7 @@
 package cloudfoundry.norouter.f5.dropsonde;
 
 import cf.dropsonde.MetronClient;
+import cloudfoundry.norouter.config.F5Properties;
 import cloudfoundry.norouter.routingtable.RouteDetails;
 import cloudfoundry.norouter.routingtable.RouteRegistrar;
 import io.netty.bootstrap.ServerBootstrap;
@@ -28,19 +29,27 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 /**
  * @author Mike Heath
  */
 // TODO Add support for limiting incoming message to certain CIDR ranges
 // TODO Support HttpStart, HttpStop, HttpStartStop events
-// TODO Make port configurable
-// TODO Auto register this norouter with LTM pool used for logging
+@Component
 public class LineEventToMetronServer {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(LineEventToMetronServer.class);
 
-	public LineEventToMetronServer(EventLoopGroup boss, EventLoopGroup worker, RouteRegistrar routeRegistrar, MetronClient metronClient) {
+	@Autowired
+	public LineEventToMetronServer(
+			@Qualifier("boss") EventLoopGroup boss,
+			@Qualifier("worker") EventLoopGroup worker,
+			RouteRegistrar routeRegistrar,
+			MetronClient metronClient,
+			F5Properties properties) {
 		final ServerBootstrap bootstrap = new ServerBootstrap();
 		bootstrap
 				.group(boss, worker)
@@ -79,9 +88,8 @@ public class LineEventToMetronServer {
 						});
 					}
 				});
-		final int port = 8007;
-		bootstrap.bind(port).syncUninterruptibly();
-		LOGGER.info("Listening for logging events from the LTM on port {}", port);
+		bootstrap.bind(properties.getLoggingPort()).syncUninterruptibly();
+		LOGGER.info("Listening for logging events from the LTM on port {}", properties.getLoggingPort());
 	}
 
 }

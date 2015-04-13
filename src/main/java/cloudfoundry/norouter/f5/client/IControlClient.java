@@ -44,7 +44,7 @@ public interface IControlClient extends AutoCloseable {
 
 	Pool createPool(Pool pool);
 
-	Pool getPool(String name);
+	Pool getPool(String name) throws ResourceNotFoundException;
 
 	void deletePool(String name);
 

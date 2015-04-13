@@ -15,21 +15,17 @@
  */
 package cloudfoundry.norouter.config;
 
-import cf.dropsonde.MetronClient;
-import cloudfoundry.norouter.f5.Agent;
 import cloudfoundry.norouter.f5.client.HttpClientIControlClient;
 import cloudfoundry.norouter.f5.client.IControlClient;
-import cloudfoundry.norouter.f5.dropsonde.LineEventToMetronServer;
 import cloudfoundry.norouter.routingtable.RouteRegistrar;
-import io.netty.channel.EventLoopGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.core.io.ClassPathResource;
@@ -44,6 +40,7 @@ import java.nio.charset.StandardCharsets;
  */
 @Configuration
 @EnableConfigurationProperties(F5Properties.class)
+@ComponentScan("cloudfoundry.norouter.f5")
 public class F5Config implements InitializingBean {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(F5Config.class);
@@ -64,20 +61,10 @@ public class F5Config implements InitializingBean {
 				.build();
 	}
 
-	@Bean
-	Agent agent() {
-		return new Agent(properties.getPoolNamePrefix(), iControlClient(), routeRegistrar);
-	}
-
-	@Bean
-	LineEventToMetronServer lineEventServer(
-			@Qualifier("boss") EventLoopGroup bossEventLoop,
-			@Qualifier("worker") EventLoopGroup workerEventLoop,
-			RouteRegistrar routeRegistrar,
-	        MetronClient metronClient
-	) {
-		return new LineEventToMetronServer(bossEventLoop, workerEventLoop, routeRegistrar, metronClient);
-	}
+//	@Bean
+//	Agent agent() {
+//		return new Agent(properties.getPoolNamePrefix(), iControlClient(), routeRegistrar);
+//	}
 
 	@Bean
 	@Scope(BeanDefinition.SCOPE_PROTOTYPE)
@@ -100,17 +87,18 @@ public class F5Config implements InitializingBean {
 		final String routerIRule = routerIRule()
 				.add("poolNamePrefix", properties.getPoolNamePrefix())
 				.render();
-		updateIRule(properties.getiRuleNamePrefix() + "router", routerIRule);
+		final String routerIRuleName = properties.getiRuleNamePrefix() + "router";
+		LOGGER.info("Updating iRule {}", routerIRuleName);
+		iControlClient().createOrUpdateIRule(routerIRuleName, routerIRule);
 
+		final String loggingPoolName = properties.getLoggingPoolName();
 		final String loggingIRule = loggingIRule()
-				.add("logging_pool", properties.getPoolNamePrefix() + "_norouter_loggers")
+				.add("logging_pool", loggingPoolName)
 				.add("ltm_id", properties.getLtmId())
 				.render();
-		updateIRule(properties.getiRuleNamePrefix() + "logging", loggingIRule);
+		final String loggingIRuleName = properties.getiRuleNamePrefix() + "logging";
+		LOGGER.info("Updating iRule {} using pool {} for handling logging events", loggingIRuleName, loggingPoolName);
+		iControlClient().createOrUpdateIRule(loggingIRuleName, loggingIRule);
 	}
 
-	private void updateIRule(String name, String rule) {
-		LOGGER.info("Updating iRule {}", name);
-		iControlClient().createOrUpdateIRule(name, rule);
-	}
 }
