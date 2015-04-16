@@ -70,4 +70,20 @@ public interface IControlClient extends AutoCloseable {
 
 	PoolMember disablePoolMember(String poolName, InetSocketAddress poolMember);
 
+	VirtualServer createVirtualServer(VirtualServer virtualServer);
+
+	VirtualServer getVirtualServer(String name);
+
+	VirtualServer updateVirtualServer(VirtualServer virtualServer);
+
+	default VirtualServer createOrUpdateVirtualServer(VirtualServer virtualServer) {
+		try {
+			return createVirtualServer(virtualServer);
+		} catch (ConflictException e) {
+			return updateVirtualServer(virtualServer);
+		}
+	}
+
+	void deleteVirtualServer(String name);
+
 }

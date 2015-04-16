@@ -16,6 +16,7 @@
 
 package cloudfoundry.norouter.f5;
 
+import cloudfoundry.norouter.NorouterUtil;
 import cloudfoundry.norouter.f5.client.ConflictException;
 import cloudfoundry.norouter.f5.client.IControlClient;
 import cloudfoundry.norouter.f5.client.Monitors;
@@ -94,8 +95,7 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered, Au
 				.forEach(pool -> pool.getMembers().ifPresent(members ->
 						members.forEach(member -> {
 							final String host = pool.getName().substring(poolNamePrefix.length());
-							final String[] addressParts = member.getName().split(":");
-							final InetSocketAddress address = InetSocketAddress.createUnresolved(addressParts[0], Integer.valueOf(addressParts[1]));
+							final InetSocketAddress address = NorouterUtil.toSocketAddress(member.getName());
 							final PoolMemberDescription description = PoolMemberDescription
 									.fromJsonish(member.getDescription())
 									.orElse(new PoolMemberDescription());

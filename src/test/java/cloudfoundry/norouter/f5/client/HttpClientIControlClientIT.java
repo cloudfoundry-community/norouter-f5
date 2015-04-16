@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -65,7 +66,7 @@ public class HttpClientIControlClientIT {
 
 	@Test
 	public void createAndDeleteEmptyPool() {
-		final String poolName = "Rest-Client-Test-" + UUID.randomUUID().toString();
+		final String poolName = "__Rest-Client-Test-" + UUID.randomUUID().toString();
 		final String description = "If you're reading this, please delete this pool.";
 		final Pool pool = Pool.create().name(poolName).description(description).build();
 
@@ -94,7 +95,7 @@ public class HttpClientIControlClientIT {
 	@Test
 	public void poolMemberCreateAndDelete() {
 		final InetSocketAddress poolMember = InetSocketAddress.createUnresolved("1.2.3.4", 80);
-		final String poolName = "Rest-Client-Test-" + UUID.randomUUID().toString();
+		final String poolName = "__Rest-Client-Test-" + UUID.randomUUID().toString();
 		final String description = "If you're reading this, please delete this pool.";
 		final Pool pool = Pool.create()
 				.name(poolName)
@@ -138,9 +139,9 @@ public class HttpClientIControlClientIT {
 		client.deletePool(poolName);
 	}
 
-	@Test
+	@Test(expectedExceptions = ConflictException.class)
 	public void createTwoPoolsWithSameName() {
-		final String poolName = "Rest-Client-Test-" + UUID.randomUUID().toString();
+		final String poolName = "__Rest-Client-Test-" + UUID.randomUUID().toString();
 		final String description = "If you're reading this, please delete this pool.";
 		final Pool pool = Pool.create()
 				.name(poolName)
@@ -151,11 +152,10 @@ public class HttpClientIControlClientIT {
 		try {
 			client.createPool(pool);
 			fail("Attempt to create second pool should have been a conflict");
-		} catch (ConflictException e) {
-			// Pass
+		} finally {
+			client.deletePool(poolName);
 		}
 
-		client.deletePool(poolName);
 	}
 
 	@Test(expectedExceptions = ResourceNotFoundException.class)
@@ -170,7 +170,7 @@ public class HttpClientIControlClientIT {
 
 	@Test
 	public void disablePoolMember() {
-		final String poolName = "Rest-Client-Test-" + UUID.randomUUID().toString();
+		final String poolName = "__Rest-Client-Test-" + UUID.randomUUID().toString();
 		final String description = "If you're reading this, please delete this pool.";
 		final Pool pool = Pool.create()
 				.name(poolName)
@@ -191,7 +191,7 @@ public class HttpClientIControlClientIT {
 
 	@Test
 	public void createIRule() {
-		final String name = "TestIRule-" + UUID.randomUUID().toString();
+		final String name = "__TestIRule-" + UUID.randomUUID().toString();
 		final String body = "# If you're reading this, delete this iRule.\nwhen HTTP_REQUEST {}";
 		try {
 			final IRule iRule = client.createIRule(name, body);
@@ -199,6 +199,45 @@ public class HttpClientIControlClientIT {
 			assertEquals(iRule.getBody(), body);
 		} finally {
 			client.deleteIRule(name);
+		}
+	}
+
+	@Test
+	public void createVirtualServer() {
+		final String name = "aa__TestVirtualServer-" + UUID.randomUUID().toString();
+		final String description = "If you are reading this, please delete this virtual server.";
+		final String destination = "1"
+				+ "." + ThreadLocalRandom.current().nextInt(255)
+				+ "." + ThreadLocalRandom.current().nextInt(255)
+				+ "." + ThreadLocalRandom.current().nextInt(255)
+				+ ":80";
+		// This rule should be available on all LTMs
+		final String systemRule = "_sys_https_redirect";
+
+		try {
+			final VirtualServer virtualServer = VirtualServer.create()
+					.name(name)
+					.description(description)
+					.destination(destination)
+					.addRule(systemRule)
+					.addProfile(VirtualServer.Profile.TCP_PROFILE)
+					.addProfile(VirtualServer.Profile.HTTP_PROFILE)
+					.build();
+
+			final VirtualServer createdVirtualServer = client.createVirtualServer(virtualServer);
+			assertEquals(createdVirtualServer.getName(), name);
+			assertEquals(createdVirtualServer.getDescription(), description);
+			assertTrue(createdVirtualServer.getDestination().contains(destination));
+			assertTrue(createdVirtualServer.getRules().stream()
+					.filter(rule -> rule.contains(systemRule))
+					.findFirst()
+					.isPresent());
+		} finally {
+			try {
+				client.deleteVirtualServer(name);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
 		}
 	}
 

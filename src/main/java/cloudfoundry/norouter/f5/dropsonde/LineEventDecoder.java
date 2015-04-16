@@ -15,6 +15,7 @@
  */
 package cloudfoundry.norouter.f5.dropsonde;
 
+import cloudfoundry.norouter.NorouterUtil;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
@@ -68,18 +69,11 @@ public class LineEventDecoder extends MessageToMessageDecoder<ByteBuf> {
 		final String message = buffer.toString(StandardCharsets.UTF_8);
 		out.add(new LogEvent(
 				ltmIdentifier,
-				parseAddress(address),
+				NorouterUtil.toSocketAddress(address),
 				Instant.ofEpochMilli(Long.valueOf(timestamp)),
 				UUID.fromString(requestId),
 				message
 		));
 	}
 
-	private InetSocketAddress parseAddress(String address) {
-		final String[] parts = address.split(":");
-		if (parts.length != 2) {
-			throw new IllegalArgumentException("Invalid socket address: " + address);
-		}
-		return InetSocketAddress.createUnresolved(parts[0], Integer.valueOf(parts[1]));
-	}
 }

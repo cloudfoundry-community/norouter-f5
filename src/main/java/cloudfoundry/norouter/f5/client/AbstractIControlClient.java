@@ -34,7 +34,7 @@ public abstract class AbstractIControlClient implements IControlClient {
 	protected static final String LTM_URI = "/mgmt/tm/ltm";
 	protected static final String IRULE_URI = LTM_URI + "/rule";
 	protected static final String POOL_URI = LTM_URI + "/pool";
-
+	protected static final String VIRTUAL_URI = LTM_URI + "/virtual";
 
 	protected final URI address;
 
@@ -156,6 +156,30 @@ public abstract class AbstractIControlClient implements IControlClient {
 		final String uri = membersUri(poolName) + "/" + member.toString();
 		final JsonNode resource = putResource(uri, DISABLE_POOL_MEMBER_BODY);
 		return readValue(resource, PoolMember.class);
+	}
+
+	@Override
+	public VirtualServer createVirtualServer(VirtualServer virtualServer) {
+		final JsonNode resource = postResource(VIRTUAL_URI, virtualServer);
+		return readValue(resource, VirtualServer.class);
+	}
+
+	@Override
+	public VirtualServer updateVirtualServer(VirtualServer virtualServer) {
+		final JsonNode resource = putResource(VIRTUAL_URI, virtualServer);
+		return readValue(resource, VirtualServer.class);
+	}
+
+	@Override
+	public VirtualServer getVirtualServer(String name) {
+		final String uri = VIRTUAL_URI + "/" + name;
+		return readValue(getResource(uri), VirtualServer.class);
+	}
+
+	@Override
+	public void deleteVirtualServer(String name) {
+		final String uri = VIRTUAL_URI + "/" + name;
+		deleteResource(uri);
 	}
 
 	protected abstract JsonNode getResource(String uri);
