@@ -31,9 +31,9 @@ public class F5Properties {
 
 	private boolean skipTlsVerification = true;
 
-	private String poolNamePrefix = "cf-pool_";
-	private String iRuleNamePrefix = "cf-irule_";
-	private String loggingPoolName = "cf-logging-pool";
+	private String poolNamePrefix = "zz_cf-pool_";
+	private String iRuleNamePrefix = "zz_cf-irule_";
+	private String loggingPoolName = "zz_cf-logging-pool";
 	private int loggingPort = 2015;
 
 	private String ltmId = "f5.ltmId";
@@ -109,4 +109,5 @@ public class F5Properties {
 	public void setLtmId(String ltmId) {
 		this.ltmId = ltmId;
 	}
+
 }

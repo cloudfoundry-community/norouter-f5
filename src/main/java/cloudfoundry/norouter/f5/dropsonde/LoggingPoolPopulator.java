@@ -31,6 +31,7 @@ import org.springframework.stereotype.Component;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author Mike Heath
@@ -48,6 +49,8 @@ public class LoggingPoolPopulator {
 
 	@Autowired
 	IControlClient client;
+
+	private final CountDownLatch poolCreatedLatch = new CountDownLatch(1);
 
 	@Scheduled(initialDelay = 0l, fixedRate = 30 * 1000) // Check the logging pool every 30 seconds
 	public void registerLoggingPool() {
@@ -67,6 +70,16 @@ public class LoggingPoolPopulator {
 					.description("Pool used for norouter HSL to forward Dropsonde events to Loggregator.")
 					.build();
 			client.createPool(pool);
+		} finally {
+			poolCreatedLatch.countDown();
+		}
+	}
+
+	public void waitForLoggingPoolCreation() {
+		try {
+			poolCreatedLatch.await();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
