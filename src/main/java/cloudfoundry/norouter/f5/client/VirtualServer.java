@@ -109,7 +109,7 @@ public class VirtualServer extends JsonObject {
 			return this;
 		}
 
-		VirtualServer build() {
+		public VirtualServer build() {
 			return new VirtualServer(this);
 		}
 
@@ -135,6 +135,7 @@ public class VirtualServer extends JsonObject {
 		this.sourceAddressTranslation = sourceAddressTranslation;
 		this.profiles = profiles;
 		this.pool = pool;
+		validate();
 	}
 
 	private VirtualServer(Builder builder) {
@@ -147,6 +148,13 @@ public class VirtualServer extends JsonObject {
 		this.sourceAddressTranslation = builder.sourceAddressTranslation;
 		this.profiles = new SubCollection<>(null, builder.profiles);
 		this.pool = builder.pool;
+		validate();
+	}
+
+	private void validate() {
+		if (name == null || name.trim().length() == 0) {
+			throw new IllegalArgumentException("name can not be empty");
+		}
 	}
 
 	public String getName() {

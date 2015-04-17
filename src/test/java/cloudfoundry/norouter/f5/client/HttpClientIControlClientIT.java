@@ -232,6 +232,8 @@ public class HttpClientIControlClientIT {
 					.filter(rule -> rule.contains(systemRule))
 					.findFirst()
 					.isPresent());
+
+			final VirtualServer updatedVirtualServer = client.updateVirtualServer(virtualServer);
 		} finally {
 			try {
 				client.deleteVirtualServer(name);

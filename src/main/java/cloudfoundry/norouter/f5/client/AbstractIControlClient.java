@@ -166,7 +166,8 @@ public abstract class AbstractIControlClient implements IControlClient {
 
 	@Override
 	public VirtualServer updateVirtualServer(VirtualServer virtualServer) {
-		final JsonNode resource = putResource(VIRTUAL_URI, virtualServer);
+		final String uri = VIRTUAL_URI + "/" + virtualServer.getName();
+		final JsonNode resource = patchResource(uri, virtualServer);
 		return readValue(resource, VirtualServer.class);
 	}
 
@@ -185,6 +186,7 @@ public abstract class AbstractIControlClient implements IControlClient {
 	protected abstract JsonNode getResource(String uri);
 	protected abstract JsonNode postResource(String uri, Object resource);
 	protected abstract JsonNode putResource(String uri, Object resource);
+	protected abstract JsonNode patchResource(String uri, Object resource);
 	protected abstract void deleteResource(String uri);
 
 	protected void validateResponse(int statusCode, String reason, String body, int... expectedStatusCodes) {
