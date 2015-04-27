@@ -51,36 +51,31 @@ public class LoggingPoolPopulator {
 	@Autowired
 	IControlClient client;
 
-	private final CountDownLatch poolCreatedLatch = new CountDownLatch(1);
-
 	@Scheduled(initialDelay = 0l, fixedRate = 30 * 1000) // Check the logging pool every 30 seconds
 	public void registerLoggingPool() {
-		final InetSocketAddress poolMember = InetSocketAddress.createUnresolved(norouterProperties.getHostAddress(), f5Properties.getLoggingPort());
-		try {
-			final Pool loggingPool = client.getPool(f5Properties.getLoggingPoolName());
-			if (!containsSelf(loggingPool.getMembers(), poolMember)) {
-				LOGGER.info("Added member {} to pool {}", poolMember, f5Properties.getLoggingPoolName());
-				client.addPoolMember(f5Properties.getLoggingPoolName(), poolMember);
-			}
-		} catch (ResourceNotFoundException e) {
-			LOGGER.info("Creating pool {} with initial member {}", f5Properties.getLoggingPoolName(), poolMember);
-			final Pool pool = Pool.create()
-					.name(f5Properties.getLoggingPoolName())
-					.monitor(Monitors.TCP_HALF_OPEN)
-					.addMember(norouterProperties.getHostAddress(), f5Properties.getLoggingPort())
-					.description("Pool used for norouter HSL to forward Dropsonde events to Loggregator.")
-					.build();
-			client.createPool(pool);
-		} finally {
-			poolCreatedLatch.countDown();
-		}
+		updateLoggingPool();
 	}
 
-	public void waitForLoggingPoolCreation() {
-		try {
-			poolCreatedLatch.await();
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
+	public void updateLoggingPool() {
+		synchronized (this) {
+			final InetSocketAddress poolMember = InetSocketAddress.createUnresolved(norouterProperties.getHostAddress(), f5Properties.getLoggingPort());
+			final String loggingPoolName = f5Properties.getLoggingPoolName();
+			try {
+				final Pool loggingPool = client.getPool(loggingPoolName);
+				if (!containsSelf(loggingPool.getMembers(), poolMember)) {
+					LOGGER.info("Added member {} to pool {}", poolMember, loggingPoolName);
+					client.addPoolMember(loggingPoolName, poolMember);
+				}
+			} catch (ResourceNotFoundException e) {
+				LOGGER.info("Creating pool {} with initial member {}", loggingPoolName, poolMember);
+				final Pool pool = Pool.create()
+						.name(loggingPoolName)
+						.monitor(Monitors.TCP_HALF_OPEN)
+						.addMember(poolMember)
+						.description("Pool used for norouter HSL to forward Dropsonde events to Loggregator.")
+						.build();
+				client.createPool(pool);
+			}
 		}
 	}
 

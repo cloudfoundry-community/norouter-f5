@@ -77,7 +77,7 @@ public class F5Initializer implements ApplicationListener<ContextRefreshedEvent>
 			LOGGER.info("Updating iRule {}", routerIRuleName);
 			client.createOrUpdateIRule(routerIRuleName, routerIRule);
 
-			loggingPoolPopulator.waitForLoggingPoolCreation();
+			loggingPoolPopulator.updateLoggingPool();
 			final String loggingPoolName = properties.getLoggingPoolName();
 			final String loggingIRule = loggingIRule()
 					.add("logging_pool", loggingPoolName)

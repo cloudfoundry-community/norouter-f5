@@ -28,7 +28,9 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -63,6 +65,11 @@ public class Main {
 				.create("norouter")
 				.metronAgent(new InetSocketAddress(metronProperties.getAddress(), metronProperties.getPort()))
 				.build();
+	}
+
+	@Bean
+	TaskScheduler taskScheduler() {
+		return new ThreadPoolTaskScheduler();
 	}
 
 	public static void main(String[] args) {
