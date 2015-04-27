@@ -32,5 +32,6 @@ when HTTP_REQUEST {
       </body>
       </html>"
     HTTP::respond 404 content $body404Content
+    event disable all
   }
 }
