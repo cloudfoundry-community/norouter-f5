@@ -17,6 +17,7 @@ package cloudfoundry.norouter.f5.dropsonde;
 
 import cloudfoundry.norouter.NorouterProperties;
 import cloudfoundry.norouter.config.F5Properties;
+import cloudfoundry.norouter.config.RoutingTableConfig;
 import cloudfoundry.norouter.f5.client.IControlClient;
 import cloudfoundry.norouter.f5.client.Monitors;
 import cloudfoundry.norouter.f5.client.Pool;
