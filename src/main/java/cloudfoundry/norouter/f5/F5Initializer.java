@@ -67,9 +67,20 @@ public class F5Initializer implements ApplicationListener<ContextRefreshedEvent>
 		return new ST(template, '`', '`');
 	}
 
+	ST sessionAffinityIRule() throws IOException {
+		final ClassPathResource resource = new ClassPathResource("templates/irules/session-affinity.tcl.st");
+		final String template = StreamUtils.copyToString(resource.getInputStream(), StandardCharsets.UTF_8);
+		return new ST(template);
+	}
+
 	@Override
 	public void onApplicationEvent(ContextRefreshedEvent event) {
 		try {
+			final String sessionAffinityIRule = sessionAffinityIRule().render();
+			final String sessionAffinityIruleName = properties.getiRuleNamePrefix() + "session_affinity";
+			LOGGER.info("Updating iRule {}", sessionAffinityIruleName);
+			client.createOrUpdateIRule(sessionAffinityIruleName, sessionAffinityIRule);
+
 			final String routerIRule = routerIRule()
 					.add("poolNamePrefix", properties.getPoolNamePrefix())
 					.render();
@@ -92,6 +103,7 @@ public class F5Initializer implements ApplicationListener<ContextRefreshedEvent>
 					.name(vipProperties.getName())
 					.description(vipProperties.getDescription())
 					.destination(vipProperties.getDestination())
+					.addRule(sessionAffinityIruleName)
 					.addRule(routerIRuleName)
 					.addRule(loggingIRuleName)
 					.addProfile(VirtualServer.Profile.TCP_PROFILE)
