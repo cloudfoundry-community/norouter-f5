@@ -154,35 +154,27 @@ public class Agent implements ApplicationListener<ApplicationEvent>, Ordered, Au
 		final String poolName = poolNamePrefix + unregisterEvent.getHost();
 		final InetSocketAddress poolMember = unregisterEvent.getAddress();
 
-		// Disable the pool member
-		LOGGER.info("Disabling pool member () from pool {}", poolMember, poolName);
-		client.disablePoolMember(poolName, poolMember);
+		boolean removedPoolMember = false;
+		try {
+			LOGGER.info("Removing pool member {} from pool {}", poolMember, poolName);
+			client.deletePoolMember(poolName, poolMember);
+			removedPoolMember = true;
+		} catch (ResourceNotFoundException e) {
+			// The pool member was already removed
+		}
 
-		// Delete the pool member one minute later
-		// TODO Check connection count and delete pool member sooner if it doesn't have any connections
-		scheduler.schedule(() -> {
-			boolean removedPoolMember = false;
-			try {
-				LOGGER.info("Removing pool member {} from pool {}", poolMember, poolName);
-				client.deletePoolMember(poolName, poolMember);
-				removedPoolMember = true;
-			} catch (ResourceNotFoundException e) {
-				// The pool member was already removed
+		boolean deletedPool = false;
+		try {
+			if (unregisterEvent.isLast()) {
+				deletedPool = safeDeletePool(poolName);
 			}
-
-			boolean deletedPool = false;
-			try {
-				if (unregisterEvent.isLast()) {
-					deletedPool = safeDeletePool(poolName);
-				}
-				if (!deletedPool && removedPoolMember) {
-					updatePoolModifiedTimestamp(poolName);
-					LOGGER.debug("Updated modified field on pool {}", poolName);
-				}
-			} catch (ResourceNotFoundException e) {
-				// The pool was already removed
+			if (!deletedPool && removedPoolMember) {
+				updatePoolModifiedTimestamp(poolName);
+				LOGGER.debug("Updated modified field on pool {}", poolName);
 			}
-		}, 1, TimeUnit.MINUTES);
+		} catch (ResourceNotFoundException e) {
+			// The pool was already removed
+		}
 	}
 
 	private void updatePoolModifiedTimestamp(String poolName) {
