@@ -42,6 +42,7 @@ public class VirtualServer extends JsonObject {
 	private final SourceAddressTranslation sourceAddressTranslation;
 	private final SubCollection<Profile> profiles;
 	private final String pool;
+	private final String source;
 
 	public static Builder create() {
 		return new Builder();
@@ -58,6 +59,7 @@ public class VirtualServer extends JsonObject {
 		private SourceAddressTranslation sourceAddressTranslation = SourceAddressTranslation.AUTOMAP;
 		private Collection<Profile> profiles = new ArrayList<>();
 		private String pool;
+		private String source = "0.0.0.0/0";
 
 		public Builder name(String name) {
 			this.name = name;
@@ -99,6 +101,11 @@ public class VirtualServer extends JsonObject {
 			return this;
 		}
 
+		public Builder source(String source) {
+			this.source = source;
+			return this;
+		}
+
 		public Builder addProfile(Profile profile) {
 			profiles.add(profile);
 			return this;
@@ -125,7 +132,9 @@ public class VirtualServer extends JsonObject {
 			@JsonProperty("rules") Collection<String> rules,
 			@JsonProperty("sourceAddressTranslation") SourceAddressTranslation sourceAddressTranslation,
 			@JsonProperty("profilesReference") SubCollection<Profile> profiles,
-			@JsonProperty("pool") String pool) {
+			@JsonProperty("pool") String pool,
+	        @JsonProperty("source") String source
+	) {
 		this.name = name;
 		this.description = description;
 		this.destination = destination;
@@ -135,6 +144,7 @@ public class VirtualServer extends JsonObject {
 		this.sourceAddressTranslation = sourceAddressTranslation;
 		this.profiles = profiles;
 		this.pool = pool;
+		this.source = source;
 		validate();
 	}
 
@@ -148,6 +158,7 @@ public class VirtualServer extends JsonObject {
 		this.sourceAddressTranslation = builder.sourceAddressTranslation;
 		this.profiles = new SubCollection<>(null, builder.profiles);
 		this.pool = builder.pool;
+		this.source = builder.source;
 		validate();
 	}
 
@@ -197,6 +208,10 @@ public class VirtualServer extends JsonObject {
 
 	public String getPool() {
 		return pool;
+	}
+
+	public String getSource() {
+		return source;
 	}
 
 	public static class SourceAddressTranslation extends JsonObject {

@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -213,6 +214,7 @@ public class HttpClientIControlClientIT {
 				+ ":80";
 		// This rule should be available on all LTMs
 		final String systemRule = "_sys_https_redirect";
+		final String source = "10.0.0.0/8";
 
 		try {
 			final VirtualServer virtualServer = VirtualServer.create()
@@ -222,6 +224,7 @@ public class HttpClientIControlClientIT {
 					.addRule(systemRule)
 					.addProfile(VirtualServer.Profile.TCP_PROFILE)
 					.addProfile(VirtualServer.Profile.HTTP_PROFILE)
+					.source(source)
 					.build();
 
 			final VirtualServer createdVirtualServer = client.createVirtualServer(virtualServer);
@@ -232,8 +235,9 @@ public class HttpClientIControlClientIT {
 					.filter(rule -> rule.contains(systemRule))
 					.findFirst()
 					.isPresent());
-
+			assertEquals(createdVirtualServer.getSource(), source);
 			final VirtualServer updatedVirtualServer = client.updateVirtualServer(virtualServer);
+			assertNotNull(updatedVirtualServer);
 		} finally {
 			try {
 				client.deleteVirtualServer(name);

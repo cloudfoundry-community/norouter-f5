@@ -22,7 +22,6 @@ import cloudfoundry.norouter.f5.client.VirtualServer;
 import cloudfoundry.norouter.f5.dropsonde.LoggingPoolPopulator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationListener;
@@ -99,17 +98,18 @@ public class F5Initializer implements ApplicationListener<ContextRefreshedEvent>
 			client.createOrUpdateIRule(loggingIRuleName, loggingIRule);
 
 			LOGGER.info("Updating virtual server {}/{}", vipProperties.getName(), vipProperties.getDestination());
-			final VirtualServer router = VirtualServer.create()
+			final VirtualServer.Builder routerBuilder = VirtualServer.create()
 					.name(vipProperties.getName())
 					.description(vipProperties.getDescription())
 					.destination(vipProperties.getDestination())
 					.addRule(sessionAffinityIruleName)
 					.addRule(routerIRuleName)
-					.addRule(loggingIRuleName)
+					.addRule(loggingIRuleName);
+			vipProperties.getRules().forEach(routerBuilder::addRule);
+			routerBuilder
 					.addProfile(VirtualServer.Profile.TCP_PROFILE)
-					.addProfile(VirtualServer.Profile.HTTP_PROFILE)
-					.build();
-			client.createOrUpdateVirtualServer(router);
+					.addProfile(VirtualServer.Profile.HTTP_PROFILE);
+			client.createOrUpdateVirtualServer(routerBuilder.build());
 		} catch (IOException e) {
 			throw new BeanInitializationException("Error initializing F5 LTM", e);
 		}

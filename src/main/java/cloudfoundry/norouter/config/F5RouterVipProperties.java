@@ -18,6 +18,9 @@ package cloudfoundry.norouter.config;
 import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author Mike Heath
  */
@@ -29,6 +32,8 @@ public class F5RouterVipProperties {
 	@NotEmpty
 	private String destination;
 	private String description = "Cloud Foundry Norouter Virtual Server -- Automatically created by Norouter.";
+	private List<String> rules = new ArrayList<>();
+	private String source = "0.0.0.0/0";
 
 	public String getName() {
 		return name;
@@ -53,4 +58,21 @@ public class F5RouterVipProperties {
 	public void setDescription(String description) {
 		this.description = description;
 	}
+
+	public List<String> getRules() {
+		return rules;
+	}
+
+	public void setRules(List<String> rules) {
+		this.rules = rules;
+	}
+
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(String source) {
+		this.source = source;
+	}
+
 }
