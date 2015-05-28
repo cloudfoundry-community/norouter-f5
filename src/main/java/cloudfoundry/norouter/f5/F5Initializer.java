@@ -102,6 +102,7 @@ public class F5Initializer implements ApplicationListener<ContextRefreshedEvent>
 					.name(vipProperties.getName())
 					.description(vipProperties.getDescription())
 					.destination(vipProperties.getDestination())
+					.source(vipProperties.getSource())
 					.addRule(sessionAffinityIruleName)
 					.addRule(routerIRuleName)
 					.addRule(loggingIRuleName);
